@@ -27,19 +27,19 @@ public class ControlBoard : MonoBehaviour
 
         SetText(
             controlHealthText,
-            $"CONTROL: {issueManager.GetSystemHealth(RocketSystem.Control):0}%");
+            $"CONTROL:\n{issueManager.GetSystemHealth(RocketSystem.Control):0}%");
 
         SetText(
             engineHealthText,
-            $"ENGINE: {issueManager.GetSystemHealth(RocketSystem.Engine):0}%");
+            $"ENGINE:\n{issueManager.GetSystemHealth(RocketSystem.Engine):0}%");
 
         SetText(
             electricalHealthText,
-            $"ELECTRICAL: {issueManager.GetSystemHealth(RocketSystem.Electrical):0}%");
+            $"ELECTRICAL:\n{issueManager.GetSystemHealth(RocketSystem.Electrical):0}%");
 
         SetText(
             fuelHealthText,
-            $"FUEL: {issueManager.GetSystemHealth(RocketSystem.Fuel):0}%");
+            $"FUEL:\n{issueManager.GetSystemHealth(RocketSystem.Fuel):0}%");
 
         if (activeAlertsText == null)
         {
@@ -48,10 +48,11 @@ public class ControlBoard : MonoBehaviour
 
         if (issueManager.ActiveIssues.Count == 0)
         {
-            activeAlertsText.text = "ACTIVE ALERTS:\nNone";
+            activeAlertsText.text = "None";
+            return;
         }
 
-        StringBuilder alerts = new StringBuilder("ACTIVE ALERTS:\n");
+        StringBuilder alerts = new StringBuilder();
 
         foreach (IssueSource issue in issueManager.ActiveIssues)
         {
@@ -59,7 +60,7 @@ public class ControlBoard : MonoBehaviour
 
             alerts.AppendLine(
                 $"[{severity}] {issue.System} - {issue.AlertText}");
-            alerts.AppendLine($"Room: {issue.RoomName}");
+            alerts.AppendLine($"Room: {issue.RoomName}\n");
         }
 
         activeAlertsText.text = alerts.ToString();

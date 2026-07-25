@@ -39,6 +39,11 @@ public class WireSocket : Interactable
 
     public override string GetInteractionPrompt(ToolType equippedTool)
     {
+        if (wireTask != null && !wireTask.HasRequiredTool(equippedTool))
+        {
+            return $"Requires {wireTask.RequiredToolDisplayName}";
+        }
+        
         if (wireTask == null ||
             !wireTask.IsTaskActive ||
             IsOccupied ||

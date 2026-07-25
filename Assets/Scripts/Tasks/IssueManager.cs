@@ -17,6 +17,7 @@ public class IssueManager : MonoBehaviour
 
     private readonly List<IssueSource> activeIssues = new();
     private float nextSpawnTime;
+    private bool spawningEnabled = true;
 
     public IReadOnlyList<IssueSource> ActiveIssues => activeIssues;
 
@@ -53,7 +54,9 @@ public class IssueManager : MonoBehaviour
 
     private void Update()
     {
-        if (Time.time < nextSpawnTime || activeIssues.Count >= maxActiveIssues)
+        if (!spawningEnabled || 
+            Time.time < nextSpawnTime ||
+            activeIssues.Count >= maxActiveIssues)
         {
             return;
         }
@@ -108,6 +111,11 @@ public class IssueManager : MonoBehaviour
     public bool HasLaunchHealth()
     {
         return GetTotalHealth() > 90f;
+    }
+
+    public void StopSpawning()
+    {
+        spawningEnabled = false;
     }
 
     private void ScheduleNextIssue()

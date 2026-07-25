@@ -3,7 +3,9 @@ using UnityEngine;
 public enum ToolType
 {
     None, 
-    Wrench
+    Wrench,
+    WireCutters,
+    Hammer
 }
 
 public abstract class Interactable : MonoBehaviour

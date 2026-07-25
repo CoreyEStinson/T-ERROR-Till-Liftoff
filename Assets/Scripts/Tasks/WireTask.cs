@@ -33,13 +33,14 @@ public class WireTask : RepairTask
         }
     }
 
-    public bool CanPickUpWire(WireConnection wire)
+    public bool CanPickUpWire(WireConnection wire, ToolType equippedTool)
     {
-        return IsTaskActive &&
-            !IsCompleted &&
-            heldWire == null &&
-            wire != null &&
-            !wire.IsConnected;
+        return IsTaskActive
+           && !IsCompleted
+           && HasRequiredTool(equippedTool)
+           && heldWire == null
+           && wire != null
+           && !wire.IsConnected;
     }
 
     public bool IsHoldingWire(WireConnection wire)
@@ -47,9 +48,9 @@ public class WireTask : RepairTask
         return heldWire == wire;    
     }
 
-    public void TryPickUpWire(WireConnection wire)
+    public void TryPickUpWire(WireConnection wire, ToolType equippedTool)
     {
-        if (!CanPickUpWire(wire))
+        if (!CanPickUpWire(wire, equippedTool))
         {
             return;
         }

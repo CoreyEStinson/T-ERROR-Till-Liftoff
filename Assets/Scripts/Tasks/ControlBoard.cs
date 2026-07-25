@@ -10,6 +10,7 @@ public class ControlBoard : MonoBehaviour
     [SerializeField] private TMP_Text engineHealthText;
     [SerializeField] private TMP_Text electricalHealthText;
     [SerializeField] private TMP_Text fuelHealthText;
+    [SerializeField] private TMP_Text countdownText;
 
     [Header("Alerts")]
     [SerializeField] private TMP_Text activeAlertsText;
@@ -72,5 +73,19 @@ public class ControlBoard : MonoBehaviour
         {
             textField.text = value;
         }
+    }
+
+    public void SetCountdown(float secondsRemaining)
+    {
+        if (countdownText == null)
+        {
+            return;
+        }
+
+        int totalSeconds = Mathf.CeilToInt(secondsRemaining);
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+
+        countdownText.text = $"T-MINUS {minutes:00}:{seconds:00}";
     }
 }

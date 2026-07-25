@@ -18,11 +18,16 @@ public abstract class RepairTask : Interactable
     public bool IsFocused { get; private set; }
     public bool IsTaskActive => taskIsActive;
     public string TaskName => taskName;
+    public ToolType RequiredTool => requiredTool;
+    public string RequiredToolDisplayName => System.Text.RegularExpressions.Regex.Replace(
+        requiredTool.ToString(),
+        "(\\B[A-Z])",
+        " $1");
 
     public event Action<RepairTask> TaskCompleted;
     public event Action<RepairTask> TaskFailed;
 
-    protected bool HasRequiredTool(ToolType equippedTool)
+    public bool HasRequiredTool(ToolType equippedTool)
     {
         return requiredTool == ToolType.None || equippedTool == requiredTool;
     }

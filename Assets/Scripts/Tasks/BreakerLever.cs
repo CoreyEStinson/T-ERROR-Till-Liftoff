@@ -37,7 +37,7 @@ public class BreakerLever : Interactable
 
     public override string GetInteractionPrompt(ToolType equippedTool)
     {
-        if (breakerTask == null || !breakerTask.CanUseLever(this))
+        if (breakerTask == null || !breakerTask.CanUseLever(this, equippedTool))
         {
             return string.Empty;
         }
@@ -47,12 +47,12 @@ public class BreakerLever : Interactable
 
     public override bool CanInteract(ToolType equippedTool)
     {
-        return breakerTask != null && breakerTask.CanUseLever(this);
+        return breakerTask != null && breakerTask.CanUseLever(this, equippedTool);
     }
 
     public override void Interact(ToolType equippedTool)
     {
-        breakerTask?.TryFlipLever(this);
+        breakerTask?.TryFlipLever(this, equippedTool);
     }
 
     public void SetFlipped(bool isOn)

@@ -49,6 +49,11 @@ public class WireConnection : Interactable
 
     public override string GetInteractionPrompt(ToolType equippedTool)
     {
+        if (wireTask != null && !wireTask.HasRequiredTool(equippedTool))
+        {
+            return $"Requires {wireTask.RequiredToolDisplayName}";
+        }
+
         if (wireTask == null || !wireTask.IsTaskActive || IsConnected)
         {
             return string.Empty;
@@ -59,7 +64,7 @@ public class WireConnection : Interactable
             return $"[E] Put down {CurrentColor} wire";
         }
 
-        if (wireTask.CanPickUpWire(this))
+        if (wireTask.CanPickUpWire(this, equippedTool))
         {
             return $"[E] Pick up {CurrentColor} wire";
         }
@@ -70,7 +75,7 @@ public class WireConnection : Interactable
     public override bool CanInteract(ToolType equippedTool)
     {
         return wireTask != null && 
-            (wireTask.CanPickUpWire(this) || wireTask.IsHoldingWire(this));
+            (wireTask.CanPickUpWire(this, equippedTool) || wireTask.IsHoldingWire(this));
     }
 
     public override void Interact(ToolType equippedTool)
@@ -81,7 +86,7 @@ public class WireConnection : Interactable
         }
         else
         {
-            wireTask.TryPickUpWire(this);
+            wireTask.TryPickUpWire(this, equippedTool);
         }
     }
 

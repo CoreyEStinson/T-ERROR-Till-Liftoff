@@ -54,7 +54,10 @@ public class BreakerTask: RepairTask
 
     public override bool CanInteract(ToolType equippedTool)
     {
-        return IsTaskActive && !IsCompleted && !taskStarted;
+        return IsTaskActive
+           && !IsCompleted
+           && !taskStarted
+           && HasRequiredTool(equippedTool);
     }
 
     public override void Interact(ToolType equippedTool)
@@ -71,24 +74,23 @@ public class BreakerTask: RepairTask
         StartSequence(false);
     }
 
-    public bool CanUseLever(BreakerLever selectedBreaker)
+    public bool CanUseLever(BreakerLever selectedBreaker, ToolType equippedTool)
     {
-        if (!CanUseLevers)
-        {
+        if (!IsTaskActive || IsCompleted || !taskStarted || !acceptingInput)
             return false;
-        }
 
-        int index = GetBreakerIndex(selectedBreaker);
-        
-        return index >= 0 && !leverUsedThisCycle[index];
+        if (!HasRequiredTool(equippedTool))
+            return false;
+
+        int breakerIndex = System.Array.IndexOf(breakers, selectedBreaker);
+
+        return breakerIndex >= 0 && !leverUsedThisCycle[breakerIndex];
     }
 
-    public void TryFlipLever(BreakerLever selectedBreaker)
+    public void TryFlipLever(BreakerLever selectedBreaker, ToolType equippedTool)
     {
-        if (!CanUseLever(selectedBreaker))
-        {
+        if (!CanUseLever(selectedBreaker, equippedTool))
             return;
-        }
 
         int selectedIndex = GetBreakerIndex(selectedBreaker);
 

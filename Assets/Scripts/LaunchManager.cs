@@ -9,6 +9,7 @@ public class LaunchManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private IssueManager issueManager;
     [SerializeField] private ControlBoard controlBoard;
+    [SerializeField] private FirstPersonController playerController;
 
     [Header("Countdown")]
     [SerializeField, Min(1)] private float launchDurationSeconds = 300f;
@@ -23,6 +24,10 @@ public class LaunchManager : MonoBehaviour
     [SerializeField] private AudioClip oneMinuteWarning;
     [SerializeField] private AudioClip thirtySecondWarning;
     [SerializeField] private AudioClip finalTenSeconds;
+
+    [Header("Thirty Second Alarms")]
+    [SerializeField] private Light mainLight;
+    [SerializeField] private DirectionalLightAlarm[] thirtySecondAlarmLights;
 
     [Header("Result Text")]
     [SerializeField] private string successMessage = 
@@ -45,16 +50,26 @@ public class LaunchManager : MonoBehaviour
     private bool oneMinutePlayed;
     private bool thirtySecondPlayed;
     private bool finalTenSecondsPlayed;
+    private bool thirtySecondAlarmsActive;
+    private bool finalTenScreenShakeActive;
+
+    public float TimeRemaining => timeRemaining;
 
     private void Awake()
     {
         timeRemaining = launchDurationSeconds;
+
+        if (playerController == null)
+        {
+            playerController = FindAnyObjectByType<FirstPersonController>();
+        }
     }
 
     private void Start()
     {
         finalCountdownHud?.gameObject.SetActive(false);
         resultHud?.gameObject.SetActive(false);
+        SetThirtySecondAlarms(false);
 
         UpdateCountdownDisplays();
     }
@@ -85,6 +100,22 @@ public class LaunchManager : MonoBehaviour
 
         bool isFinalThirtySeconds = timeRemaining <= 30f && !launchFinished;
 
+        if (isFinalThirtySeconds && !thirtySecondAlarmsActive)
+        {
+            if (mainLight != null)
+            {
+                mainLight.gameObject.SetActive(false);
+            }
+
+            SetThirtySecondAlarms(true);
+        }
+
+        if (timeRemaining <= 10f && !finalTenScreenShakeActive)
+        {
+            finalTenScreenShakeActive = true;
+            playerController?.SetScreenShake(true);
+        }
+
         if (finalCountdownHud != null)
         {
             finalCountdownHud.gameObject.SetActive(isFinalThirtySeconds);
@@ -93,6 +124,24 @@ public class LaunchManager : MonoBehaviour
             {
                 finalCountdownHud.text = 
                     $"{Mathf.CeilToInt(timeRemaining):00}";
+            }
+        }
+    }
+
+    private void SetThirtySecondAlarms(bool active)
+    {
+        thirtySecondAlarmsActive = active;
+
+        if (thirtySecondAlarmLights == null)
+        {
+            return;
+        }
+
+        foreach (DirectionalLightAlarm alarmLight in thirtySecondAlarmLights)
+        {
+            if (alarmLight != null)
+            {
+                alarmLight.gameObject.SetActive(active);
             }
         }
     }
@@ -123,7 +172,7 @@ public class LaunchManager : MonoBehaviour
             PlayAlarm(thirtySecondWarning);
         }
 
-        if (!finalTenSecondsPlayed && previousTime > 10f && timeRemaining <= 10f)
+        if (!finalTenSecondsPlayed && previousTime > 12f && timeRemaining <= 12f)
         {
             finalTenSecondsPlayed = true;
             PlayAlarm(finalTenSeconds);
@@ -143,6 +192,9 @@ public class LaunchManager : MonoBehaviour
     {
         launchFinished = true;
         issueManager?.StopSpawning();
+        playerController?.SetScreenShake(false);
+        playerController?.SetMovementInputEnabled(false);
+        playerController?.SetLookInputEnabled(false);
 
         finalCountdownHud?.gameObject.SetActive(false);
 

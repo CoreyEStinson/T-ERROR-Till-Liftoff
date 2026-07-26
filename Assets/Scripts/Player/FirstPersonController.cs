@@ -8,6 +8,16 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] private float gravity = -9.81f;
     [SerializeField] private float jumpHeight = 1.5f;
     [SerializeField] private float cameraHeightOffset = 1f;
+
+    [Header("Jump")]
+    [SerializeField, Min(0f)] private float coyoteTime = 0.1f;
+    [SerializeField, Min(0f)] private float jumpInputBuffer = 0.12f;
+    [SerializeField, Range(0.1f, 1f)] private float jumpStrengthMultiplier = 0.8f;
+    [SerializeField, Min(1f)] private float fallGravityMultiplier = 2.25f;
+
+    [Header("Screen Shake")]
+    [SerializeField, Min(0f)] private float screenShakeStrength = 0.035f;
+
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference lookAction;
     [SerializeField] private InputActionReference jumpAction;
@@ -15,7 +25,12 @@ public class FirstPersonController : MonoBehaviour
     private CharacterController controller;
     private Vector3 velocity;
     private Transform cameraTransform;
+    private Vector3 cameraRestLocalPosition;
     private bool lockInputEnabled = true;
+    private bool movementInputEnabled = true;
+    private bool screenShakeEnabled;
+    private float lastGroundedTime = float.NegativeInfinity;
+    private float lastJumpPressedTime = float.NegativeInfinity;
 
     private void Awake()
     {
@@ -29,6 +44,7 @@ public class FirstPersonController : MonoBehaviour
                 transform.position.y + cameraHeightOffset,
                 transform.position.z);
             cameraTransform.parent = transform;
+            cameraRestLocalPosition = cameraTransform.localPosition;
         }
     }
 
@@ -62,40 +78,77 @@ public class FirstPersonController : MonoBehaviour
             UnlockCursor();
         }
 
-        Vector2 input = moveAction != null
+        Vector2 input = movementInputEnabled && moveAction != null
             ? moveAction.action.ReadValue<Vector2>()
             : Vector2.zero;
         Vector3 move = transform.right * input.x + transform.forward * input.y;
 
-        controller.Move(move * moveSpeed * Time.deltaTime);
+        bool isGrounded = controller.isGrounded;
 
-        // Apply gravity.
-        if (controller.isGrounded && velocity.y < 0)
+        if (isGrounded)
         {
-            velocity.y = -2f;
+            lastGroundedTime = Time.time;
+
+            if (velocity.y < 0f)
+            {
+                velocity.y = -2f;
+            }
         }
 
-        if (controller.isGrounded && jumpAction != null && jumpAction.action.WasPressedThisFrame())
+        if (movementInputEnabled &&
+            jumpAction != null &&
+            jumpAction.action.WasPressedThisFrame())
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            lastJumpPressedTime = Time.time;
         }
 
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        bool jumpWasPressedRecently =
+            Time.time - lastJumpPressedTime <= jumpInputBuffer;
+        bool wasGroundedRecently =
+            Time.time - lastGroundedTime <= coyoteTime;
 
-        if (cameraTransform == null || lookAction == null)
+        if (movementInputEnabled && jumpWasPressedRecently && wasGroundedRecently)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity) *
+                jumpStrengthMultiplier;
+            lastJumpPressedTime = float.NegativeInfinity;
+            lastGroundedTime = float.NegativeInfinity;
+        }
+
+        float gravityMultiplier = velocity.y < 0f
+            ? fallGravityMultiplier
+            : 1f;
+        velocity.y += gravity * gravityMultiplier * Time.deltaTime;
+
+        CollisionFlags collisionFlags = controller.Move(
+            (move * moveSpeed + Vector3.up * velocity.y) * Time.deltaTime
+        );
+
+        if ((collisionFlags & CollisionFlags.Below) != 0)
+        {
+            lastGroundedTime = Time.time;
+
+            if (velocity.y < 0f)
+            {
+                velocity.y = -2f;
+            }
+        }
+
+        if (cameraTransform == null)
         {
             return;
         }
 
-        if (!lockInputEnabled)
+        if (lockInputEnabled && lookAction != null)
         {
-            return;
+            Vector2 look = lookAction.action.ReadValue<Vector2>() * mouseSensitivity;
+            transform.Rotate(Vector3.up * look.x);
+            cameraTransform.Rotate(Vector3.left * look.y);
         }
 
-        Vector2 look = lookAction.action.ReadValue<Vector2>() * mouseSensitivity;
-        transform.Rotate(Vector3.up * look.x);
-        cameraTransform.Rotate(Vector3.left * look.y);
+        cameraTransform.localPosition = screenShakeEnabled
+            ? cameraRestLocalPosition + Random.insideUnitSphere * screenShakeStrength
+            : cameraRestLocalPosition;
     }
 
     private void OnApplicationFocus(bool hasFocus)
@@ -125,5 +178,20 @@ public class FirstPersonController : MonoBehaviour
     public void SetLookInputEnabled(bool isEnabled)
     {
         lockInputEnabled = isEnabled;
+    }
+
+    public void SetMovementInputEnabled(bool isEnabled)
+    {
+        movementInputEnabled = isEnabled;
+    }
+
+    public void SetScreenShake(bool isEnabled)
+    {
+        screenShakeEnabled = isEnabled;
+
+        if (!isEnabled && cameraTransform != null)
+        {
+            cameraTransform.localPosition = cameraRestLocalPosition;
+        }
     }
 }

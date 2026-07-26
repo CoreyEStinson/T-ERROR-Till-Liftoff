@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Text.RegularExpressions;
 
 public enum ToolType
 {
@@ -6,6 +7,14 @@ public enum ToolType
     Wrench,
     WireCutters,
     Hammer
+}
+
+public static class ToolTypeUtility
+{
+    public static string ToDisplayName(this ToolType toolType)
+    {
+        return Regex.Replace(toolType.ToString(), "(\\B[A-Z])", " $1");
+    }
 }
 
 public abstract class Interactable : MonoBehaviour

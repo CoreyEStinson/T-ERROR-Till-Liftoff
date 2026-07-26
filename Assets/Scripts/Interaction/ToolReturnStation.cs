@@ -8,7 +8,7 @@ public class ToolReturnStation : Interactable
     {
         return equippedTool == ToolType.None
             ? "Tool bench"
-            : $"[E] Put down {equippedTool}";
+            : $"[E] Put down {equippedTool.ToDisplayName()}";
     }
 
     public override bool CanInteract(ToolType equippedTool)

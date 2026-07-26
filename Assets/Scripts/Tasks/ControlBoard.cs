@@ -22,9 +22,17 @@ public class ControlBoard : MonoBehaviour
             return;
         }
 
-        SetText(
-            totalHealthText,
-            $"TOTAL INTEGRITY: {issueManager.GetTotalHealth():0}%");
+        int totalHealth = issueManager.GetRoundedTotalHealth();
+
+        SetText(totalHealthText, $"TOTAL INTEGRITY: {totalHealth}%");
+
+        if (totalHealthText != null)
+        {
+            totalHealthText.color =
+                totalHealth < issueManager.RoundedRequiredLaunchHealth
+                ? Color.red
+                : Color.green;
+        }
 
         SetText(
             controlHealthText,

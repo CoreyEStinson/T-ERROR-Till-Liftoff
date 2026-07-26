@@ -200,6 +200,7 @@ public class BreakerTask: RepairTask
 
         leverUsedThisCycle = new bool[breakers.Length];
         ResetPanelVisuals();
+        SetNonSequenceBreakersOn();
 
         yield return new WaitForSeconds(
             afterFailure ? failurePause : initialSequenceDelay);
@@ -242,6 +243,17 @@ public class BreakerTask: RepairTask
 
             breaker.SetFlipped(false);
             breaker.SetSequenceIndicator(false);
+        }
+    }
+
+    private void SetNonSequenceBreakersOn()
+    {
+        for (int i = 0; i < breakers.Length; i++)
+        {
+            if (breakers[i] != null && System.Array.IndexOf(sequence, i) < 0)
+            {
+                breakers[i].SetFlippedImmediately(true);
+            }
         }
     }
 

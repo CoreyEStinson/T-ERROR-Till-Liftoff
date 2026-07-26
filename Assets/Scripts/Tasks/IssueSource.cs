@@ -28,12 +28,21 @@ public class IssueSource : MonoBehaviour
     public RocketSystem System => rocketSystem;
     public bool IsCritical => isCritical;
     public float HealthPenalty => isCritical ? healthPenalty : 0f;
+    public float CurrentHealthPenalty =>
+        IsActive && isCritical ? currentHealthPenalty : 0f;
+    public float LastResolvedHealthPenalty => lastResolvedHealthPenalty;
     public int SpawnWeight => spawnWeight;
     public bool IsActive { get; private set; }
+    public bool IsAvailableForSelection =>
+        !IsActive && Time.time >= nextAvailableTime;
 
     public event Action<IssueSource> IssueActivated;
     public event Action<IssueSource> IssueResolved;
     public event Action<IssueSource> IssueFailed;
+
+    private float currentHealthPenalty;
+    private float lastResolvedHealthPenalty;
+    private float nextAvailableTime;
 
     private void Awake()
     {
@@ -73,6 +82,8 @@ public class IssueSource : MonoBehaviour
         }
 
         IsActive = true;
+        currentHealthPenalty = 0f;
+        lastResolvedHealthPenalty = 0f;
         repairTask.ActivateTask();
         SetFailureVisuals(true);
 
@@ -82,6 +93,7 @@ public class IssueSource : MonoBehaviour
     public void DeactivateIssue()
     {
         IsActive = false;
+        currentHealthPenalty = 0f;
 
         if (repairTask != null)
         {
@@ -91,6 +103,26 @@ public class IssueSource : MonoBehaviour
         SetFailureVisuals(false);
     }
 
+    public bool ApplyHealthPenaltyTick()
+    {
+        if (!IsActive || !isCritical || currentHealthPenalty >= healthPenalty)
+        {
+            return false;
+        }
+
+        currentHealthPenalty = Mathf.Min(
+            currentHealthPenalty + 1f,
+            healthPenalty
+        );
+
+        return true;
+    }
+
+    public void StartSelectionCooldown(float delay)
+    {
+        nextAvailableTime = Time.time + Mathf.Max(0f, delay);
+    }
+
     private void HandleTaskCompleted(RepairTask completedTask)
     {
         if (!IsActive)
@@ -98,6 +130,7 @@ public class IssueSource : MonoBehaviour
             return;
         }
 
+        lastResolvedHealthPenalty = currentHealthPenalty;
         DeactivateIssue();
         IssueResolved?.Invoke(this);
     }

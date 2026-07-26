@@ -18,7 +18,7 @@ public class ToolPickup : Interactable
 
     public override string GetInteractionPrompt(ToolType equippedTool)
     {
-        return $"[E] Pick up {tool}";
+        return $"[E] Pick up {tool.ToDisplayName()}";
     }
 
     public override void Interact(ToolType equippedTool)

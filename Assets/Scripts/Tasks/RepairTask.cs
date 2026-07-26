@@ -19,10 +19,7 @@ public abstract class RepairTask : Interactable
     public bool IsTaskActive => taskIsActive;
     public string TaskName => taskName;
     public ToolType RequiredTool => requiredTool;
-    public string RequiredToolDisplayName => System.Text.RegularExpressions.Regex.Replace(
-        requiredTool.ToString(),
-        "(\\B[A-Z])",
-        " $1");
+    public string RequiredToolDisplayName => requiredTool.ToDisplayName();
 
     public event Action<RepairTask> TaskCompleted;
     public event Action<RepairTask> TaskFailed;
@@ -43,7 +40,7 @@ public abstract class RepairTask : Interactable
 
         if (!HasRequiredTool(equippedTool))
         {
-            return $"Required {requiredTool}";
+            return $"Required {RequiredToolDisplayName}";
         }
 
         return GetActivePrompt();

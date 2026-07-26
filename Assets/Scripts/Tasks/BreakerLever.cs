@@ -73,6 +73,17 @@ public class BreakerLever : Interactable
         rotationRoutine = StartCoroutine(RotateLever(targetRotation));
     }
 
+    public void SetFlippedImmediately(bool isOn)
+    {
+        if (rotationRoutine != null)
+        {
+            StopCoroutine(rotationRoutine);
+            rotationRoutine = null;
+        }
+
+        leverHandle.localRotation = GetTargetRotation(isOn);
+    }
+
     private Quaternion GetTargetRotation(bool isOn)
     {
         float angle = isOn ? onAngle : offAngle;

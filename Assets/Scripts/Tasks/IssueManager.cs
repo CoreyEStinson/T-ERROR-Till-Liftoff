@@ -10,19 +10,52 @@ public class IssueManager : MonoBehaviour
     [SerializeField, Min(1)] private int maxActiveIssues = 3;
     [SerializeField] private float minimumSpawnDelay = 25f;
     [SerializeField] private float maxSpawnDelay = 40f;
+    [Tooltip("How long a repaired task must wait before it can become an issue again.")]
+    [SerializeField, Min(0f)] private float completedTaskCooldown = 15f;
     [SerializeField, Range(0f, 1f)] private float failureInconvenienceChance = 0.15f;
 
     [Header("Board")]
     [SerializeField] private ControlBoard controlBoard;
 
+    [Header("Launch Requirements")]
+    [SerializeField, Range(0f, 100f)] private float requiredLaunchHealth = 90f;
+
+    [Header("Health Loss")]
+    [Tooltip("Each active critical issue loses 1% health per tick until it reaches its Health Penalty.")]
+    [SerializeField, Min(0.01f)] private float minimumHealthTickDelay = 1f;
+    [SerializeField, Min(0.01f)] private float maximumHealthTickDelay = 2f;
+
+    [Header("Final 30 Seconds")]
+    [SerializeField, Min(0.01f)] private float finalThirtyMinimumHealthTickDelay = 0.3f;
+    [SerializeField, Min(0.01f)] private float finalThirtyMaximumHealthTickDelay = 0.7f;
+
+    [Header("Health Recovery")]
+    [Tooltip("Health recovers by 1% per tick after an issue is repaired.")]
+    [SerializeField, Min(0.01f)] private float minimumHealthRecoveryTickDelay = 0.75f;
+    [SerializeField, Min(0.01f)] private float maximumHealthRecoveryTickDelay = 1.25f;
+
+    [Header("References")]
+    [SerializeField] private LaunchManager launchManager;
+
     private readonly List<IssueSource> activeIssues = new();
+    private readonly float[] recoveringHealthPenalty = new float[4];
     private float nextSpawnTime;
+    private float nextHealthTickTime;
+    private float nextHealthRecoveryTickTime;
     private bool spawningEnabled = true;
 
     public IReadOnlyList<IssueSource> ActiveIssues => activeIssues;
+    public float RequiredLaunchHealth => requiredLaunchHealth;
+    public int RoundedRequiredLaunchHealth =>
+        Mathf.RoundToInt(requiredLaunchHealth);
 
     private void Awake()
     {
+        if (launchManager == null)
+        {
+            launchManager = FindAnyObjectByType<LaunchManager>();
+        }
+
         if (issueSources == null || issueSources.Length == 0)
         {
             issueSources = FindObjectsByType<IssueSource>();
@@ -48,12 +81,26 @@ public class IssueManager : MonoBehaviour
             source?.DeactivateIssue();
         }
 
-        ScheduleNextIssue();
+        ScheduleNextIssue(true);
+        ScheduleNextHealthTick();
+        ScheduleNextHealthRecoveryTick();
         RefreshBoard();
     }
 
     private void Update()
     {
+        if (Time.time >= nextHealthTickTime)
+        {
+            ApplyHealthPenaltyTick();
+            ScheduleNextHealthTick();
+        }
+
+        if (Time.time >= nextHealthRecoveryTickTime)
+        {
+            ApplyHealthRecoveryTick();
+            ScheduleNextHealthRecoveryTick();
+        }
+
         if (!spawningEnabled || 
             Time.time < nextSpawnTime ||
             activeIssues.Count >= maxActiveIssues)
@@ -90,10 +137,12 @@ public class IssueManager : MonoBehaviour
         {
             if (issue.IsCritical && issue.System == system)
             {
-                health -= issue.HealthPenalty;
+                health -= issue.CurrentHealthPenalty;
             }
         }
-        
+
+        health -= recoveringHealthPenalty[(int)system];
+
         return Mathf.Clamp(health, 0f, 100f);
     }
 
@@ -110,7 +159,12 @@ public class IssueManager : MonoBehaviour
 
     public bool HasLaunchHealth()
     {
-        return GetTotalHealth() > 90f;
+        return GetRoundedTotalHealth() >= RoundedRequiredLaunchHealth;
+    }
+
+    public int GetRoundedTotalHealth()
+    {
+        return Mathf.RoundToInt(GetTotalHealth());
     }
 
     public void StopSpawning()
@@ -118,10 +172,86 @@ public class IssueManager : MonoBehaviour
         spawningEnabled = false;
     }
 
-    private void ScheduleNextIssue()
+    private void ScheduleNextIssue(bool useMinimumDelay = false)
     {
-        float delay = Random.Range(minimumSpawnDelay, maxSpawnDelay);
+        float delay = useMinimumDelay
+            ? minimumSpawnDelay
+            : Random.Range(minimumSpawnDelay, maxSpawnDelay);
         nextSpawnTime = Time.time + delay;
+    }
+
+    private void ScheduleNextHealthTick()
+    {
+        bool isFinalThirtySeconds = launchManager != null &&
+            launchManager.TimeRemaining <= 30f;
+
+        float minimumDelay = isFinalThirtySeconds
+            ? finalThirtyMinimumHealthTickDelay
+            : minimumHealthTickDelay;
+        float maximumDelay = isFinalThirtySeconds
+            ? finalThirtyMaximumHealthTickDelay
+            : maximumHealthTickDelay;
+
+        float delay = Random.Range(
+            minimumDelay,
+            Mathf.Max(minimumDelay, maximumDelay)
+        );
+        nextHealthTickTime = Time.time + delay;
+    }
+
+    private void ScheduleNextHealthRecoveryTick()
+    {
+        float delay = Random.Range(
+            minimumHealthRecoveryTickDelay,
+            Mathf.Max(
+                minimumHealthRecoveryTickDelay,
+                maximumHealthRecoveryTickDelay
+            )
+        );
+
+        nextHealthRecoveryTickTime = Time.time + delay;
+    }
+
+    private void ApplyHealthPenaltyTick()
+    {
+        bool healthChanged = false;
+
+        foreach (IssueSource issue in activeIssues)
+        {
+            if (issue != null && issue.ApplyHealthPenaltyTick())
+            {
+                healthChanged = true;
+            }
+        }
+
+        if (healthChanged)
+        {
+            RefreshBoard();
+        }
+    }
+
+    private void ApplyHealthRecoveryTick()
+    {
+        bool healthChanged = false;
+
+        for (int i = 0; i < recoveringHealthPenalty.Length; i++)
+        {
+            if (recoveringHealthPenalty[i] <= 0f)
+            {
+                continue;
+            }
+
+            recoveringHealthPenalty[i] = Mathf.Max(
+                0f,
+                recoveringHealthPenalty[i] - 1f
+            );
+            healthChanged = true;
+        }
+
+        if (healthChanged)
+        {
+            RefreshBoard();
+        }
     }
 
     private bool TrySpawnIssue(bool inconveniencesOnly)
@@ -136,7 +266,7 @@ public class IssueManager : MonoBehaviour
         foreach (IssueSource source in issueSources)
         {
             if (source == null ||
-                source.IsActive ||
+                !source.IsAvailableForSelection ||
                 (inconveniencesOnly && source.IsCritical))
             {
                 continue;
@@ -155,7 +285,7 @@ public class IssueManager : MonoBehaviour
         foreach (IssueSource source in issueSources)
         {
             if (source == null ||
-                source.IsActive ||
+                !source.IsAvailableForSelection ||
                 (inconveniencesOnly && source.IsCritical))
             {
                 continue;
@@ -186,6 +316,14 @@ public class IssueManager : MonoBehaviour
     private void HandleIssueResolved(IssueSource source)
     {
         activeIssues.Remove(source);
+        source.StartSelectionCooldown(completedTaskCooldown);
+
+        if (source.IsCritical)
+        {
+            recoveringHealthPenalty[(int)source.System] +=
+                source.LastResolvedHealthPenalty;
+        }
+
         RefreshBoard();
     }
 

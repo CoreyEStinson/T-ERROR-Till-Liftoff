@@ -58,6 +58,6 @@ public class ToolManager : MonoBehaviour
 
         equippedToolLabel.text = EquippedTool == ToolType.None
             ? "Equipped: None"
-            : $"Equipped: {EquippedTool}";
+            : $"Equipped: {EquippedTool.ToDisplayName()}";
     }
 }

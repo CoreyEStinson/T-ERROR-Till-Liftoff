@@ -18,6 +18,15 @@ public class FirstPersonController : MonoBehaviour
     [Header("Screen Shake")]
     [SerializeField, Min(0f)] private float screenShakeStrength = 0.035f;
 
+    [Header("Footsteps")]
+    [SerializeField] private AudioSource footstepAudioSource;
+    [SerializeField] private AudioClip[] footstepClips;
+    [SerializeField, Min(0.01f)] private float footstepInterval = 0.45f;
+    [SerializeField, Range(0f, 1f)] private float minimumFootstepVolume = 0.7f;
+    [SerializeField, Range(0f, 1f)] private float maximumFootstepVolume = 1f;
+    [SerializeField, Min(0.01f)] private float minimumFootstepPitch = 0.9f;
+    [SerializeField, Min(0.01f)] private float maximumFootstepPitch = 1.1f;
+
     [SerializeField] private InputActionReference moveAction;
     [SerializeField] private InputActionReference lookAction;
     [SerializeField] private InputActionReference jumpAction;
@@ -31,10 +40,22 @@ public class FirstPersonController : MonoBehaviour
     private bool screenShakeEnabled;
     private float lastGroundedTime = float.NegativeInfinity;
     private float lastJumpPressedTime = float.NegativeInfinity;
+    private float nextFootstepTime;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = GetComponent<AudioSource>();
+        }
+
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+
         Camera mainCamera = Camera.main;
         if (mainCamera != null)
         {
@@ -134,6 +155,11 @@ public class FirstPersonController : MonoBehaviour
             }
         }
 
+        bool isMoving = move.sqrMagnitude > 0.01f;
+        bool isGroundedAfterMove = controller.isGrounded ||
+            (collisionFlags & CollisionFlags.Below) != 0;
+        PlayFootstepIfNeeded(isMoving && isGroundedAfterMove);
+
         if (cameraTransform == null)
         {
             return;
@@ -161,6 +187,35 @@ public class FirstPersonController : MonoBehaviour
         {
             UnlockCursor();
         }
+    }
+
+    private void PlayFootstepIfNeeded(bool isWalking)
+    {
+        if (!isWalking || Time.time < nextFootstepTime ||
+            footstepClips == null || footstepClips.Length == 0)
+        {
+            return;
+        }
+
+        AudioClip clip = footstepClips[Random.Range(0, footstepClips.Length)];
+
+        if (clip == null)
+        {
+            return;
+        }
+
+        footstepAudioSource.pitch = Random.Range(
+            minimumFootstepPitch,
+            Mathf.Max(minimumFootstepPitch, maximumFootstepPitch)
+        );
+        footstepAudioSource.PlayOneShot(
+            clip,
+            Random.Range(
+                minimumFootstepVolume,
+                Mathf.Max(minimumFootstepVolume, maximumFootstepVolume)
+            )
+        );
+        nextFootstepTime = Time.time + footstepInterval;
     }
 
     private static void LockCursor()

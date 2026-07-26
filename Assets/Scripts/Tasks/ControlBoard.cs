@@ -68,7 +68,7 @@ public class ControlBoard : MonoBehaviour
             string severity = issue.IsCritical ? "CRITICAL" : "NOTICE";
 
             alerts.AppendLine(
-                $"[{severity}] {issue.System} - {issue.AlertText}");
+                $"[{severity}] {issue.AlertText}");
             alerts.AppendLine($"Room: {issue.RoomName}\n");
         }
 

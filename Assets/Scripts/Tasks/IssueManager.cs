@@ -8,6 +8,7 @@ public class IssueManager : MonoBehaviour
 
     [Header("Spawning")]
     [SerializeField, Min(1)] private int maxActiveIssues = 3;
+    [SerializeField, Min(0f)] private float initialSpawnDelay = 3f;
     [SerializeField] private float minimumSpawnDelay = 25f;
     [SerializeField] private float maxSpawnDelay = 40f;
     [Tooltip("How long a repaired task must wait before it can become an issue again.")]
@@ -81,7 +82,7 @@ public class IssueManager : MonoBehaviour
             source?.DeactivateIssue();
         }
 
-        ScheduleNextIssue(true);
+        ScheduleFirstIssue();
         ScheduleNextHealthTick();
         ScheduleNextHealthRecoveryTick();
         RefreshBoard();
@@ -172,11 +173,14 @@ public class IssueManager : MonoBehaviour
         spawningEnabled = false;
     }
 
-    private void ScheduleNextIssue(bool useMinimumDelay = false)
+    private void ScheduleFirstIssue()
     {
-        float delay = useMinimumDelay
-            ? minimumSpawnDelay
-            : Random.Range(minimumSpawnDelay, maxSpawnDelay);
+        nextSpawnTime = Time.time + initialSpawnDelay;
+    }
+
+    private void ScheduleNextIssue()
+    {
+        float delay = Random.Range(minimumSpawnDelay, maxSpawnDelay);
         nextSpawnTime = Time.time + delay;
     }
 

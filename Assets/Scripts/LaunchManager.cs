@@ -23,7 +23,13 @@ public class LaunchManager : MonoBehaviour
     [SerializeField] private AudioClip twoMinuteWarning;
     [SerializeField] private AudioClip oneMinuteWarning;
     [SerializeField] private AudioClip thirtySecondWarning;
-    [SerializeField] private AudioClip finalTenSeconds;
+    [SerializeField] private AudioClip finalTenSecondsCountdown;
+    [SerializeField] private AudioClip launchSuccessResult;
+    [SerializeField] private AudioClip launchFailureResult;
+
+    [Header("Final Thirty-Second Alarm")]
+    [SerializeField] private AudioSource finalThirtyAlarmSource;
+    [SerializeField] private AudioClip finalThirtyAlarmClip;
 
     [Header("Thirty Second Alarms")]
     [SerializeField] private Light mainLight;
@@ -62,6 +68,11 @@ public class LaunchManager : MonoBehaviour
         if (playerController == null)
         {
             playerController = FindAnyObjectByType<FirstPersonController>();
+        }
+
+        if (finalThirtyAlarmSource == null)
+        {
+            finalThirtyAlarmSource = gameObject.AddComponent<AudioSource>();
         }
     }
 
@@ -108,6 +119,7 @@ public class LaunchManager : MonoBehaviour
             }
 
             SetThirtySecondAlarms(true);
+            StartFinalThirtyAlarm();
         }
 
         if (timeRemaining <= 10f && !finalTenScreenShakeActive)
@@ -146,6 +158,27 @@ public class LaunchManager : MonoBehaviour
         }
     }
 
+    private void StartFinalThirtyAlarm()
+    {
+        if (finalThirtyAlarmSource == null || finalThirtyAlarmClip == null ||
+            finalThirtyAlarmSource.isPlaying)
+        {
+            return;
+        }
+
+        finalThirtyAlarmSource.clip = finalThirtyAlarmClip;
+        finalThirtyAlarmSource.loop = true;
+        finalThirtyAlarmSource.Play();
+    }
+
+    private void StopFinalThirtyAlarm()
+    {
+        if (finalThirtyAlarmSource != null)
+        {
+            finalThirtyAlarmSource.Stop();
+        }
+    }
+
     private void PlayCountdownWarnings(float previousTime)
     {
         if (!threeMinutePlayed && previousTime > 180f && timeRemaining <= 180f)
@@ -175,7 +208,7 @@ public class LaunchManager : MonoBehaviour
         if (!finalTenSecondsPlayed && previousTime > 12f && timeRemaining <= 12f)
         {
             finalTenSecondsPlayed = true;
-            PlayAlarm(finalTenSeconds);
+            PlayAlarm(finalTenSecondsCountdown);
         } 
         
     }
@@ -191,6 +224,7 @@ public class LaunchManager : MonoBehaviour
     private void FinishLaunch()
     {
         launchFinished = true;
+        StopFinalThirtyAlarm();
         issueManager?.StopSpawning();
         playerController?.SetScreenShake(false);
         playerController?.SetMovementInputEnabled(false);
@@ -199,6 +233,7 @@ public class LaunchManager : MonoBehaviour
         finalCountdownHud?.gameObject.SetActive(false);
 
         bool succeeded = issueManager != null && issueManager.HasLaunchHealth();
+        PlayResultAudio(succeeded ? launchSuccessResult : launchFailureResult);
 
         if (resultHud != null)
         {
@@ -237,5 +272,22 @@ public class LaunchManager : MonoBehaviour
                 $"Main menu scene '{mainMenuScene}' is not in Build Settings"
             );
         }
+    }
+
+    private void PlayResultAudio(AudioClip clip)
+    {
+        AudioSource resultAudioSource = voiceSound != null
+            ? voiceSound
+            : alarmSource;
+
+        if (resultAudioSource != null && clip != null)
+        {
+            resultAudioSource.PlayOneShot(clip);
+        }
+    }
+
+    private void OnDisable()
+    {
+        StopFinalThirtyAlarm();
     }
 }
